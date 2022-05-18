@@ -5,6 +5,9 @@
 # (set-frame-font "Ubuntu Mono-48")
 
 * a short self intro
+- digital IC design engineer
+- interested in FOSS, long time GNU/Linux user
+- familiar with functional programming
 * what is Clash
 * simplified intro for Haskell
 ** pure
@@ -12,7 +15,7 @@
 ** high order function, function vs variable
 ** curry
 ** monad
-** an example in ghci
+* try some code in ghci
 #+begin_src haskell
   -- reciprocal calculate, 1/d
   f d x = x * (2 - d * x)
@@ -36,6 +39,7 @@
 * combinational logic
 * sequential logic
 * trival example, FIR Filter
+
 * non trival example, reciprocal calculation
 ** function
 ** sequential implementation
