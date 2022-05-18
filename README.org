@@ -1,0 +1,45 @@
+#+title: A short introduction to Clash
+#+author: Yù Chāngyuǎn
+
+# use large font, run below command with C-x C-e
+# (set-frame-font "Ubuntu Mono-48")
+
+* a short self intro
+* what is Clash
+* simplified intro for Haskell
+** pure
+** lazy evaluation
+** high order function, function vs variable
+** curry
+** monad
+** an example in ghci
+#+begin_src haskell
+  -- reciprocal calculate, 1/d
+  f d x = x * (2 - d * x)
+
+  f 0.7 1
+  (f 0.7) 1
+  f 0.7 $ 1
+
+  f 0.7 $ f 0.7 $ 1
+  f 0.7 $ f 0.7 $ f 0.7 $ 1
+
+  (f 0.7) . (f 0.7) . (f 0.7) $ 1
+
+  foldr (.) id [f 0.7, f 0.7, f 0.7] $ 1
+
+  foldr (.) id (replicate 3 $ f 0.7) $ 1
+
+  recipI n d = foldr (.) id (replicate n $ f d) $ 1
+#+end_src
+* ~Signal~ in Clash
+* combinational logic
+* sequential logic
+* trival example, FIR Filter
+* non trival example, reciprocal calculation
+** function
+** sequential implementation
+* compare to other (HDL) language
+* refs
+https://downloads.haskell.org/ghc/latest/docs/html/users_guide/
+https://hackage.haskell.org/package/clash-prelude
