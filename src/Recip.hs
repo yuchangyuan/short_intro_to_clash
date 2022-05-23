@@ -1,41 +1,41 @@
-{-# language FlexibleInstances #-}
+{-# language FlexibleInstances, FunctionalDependencies #-}
 module Recip where
 
 import Clash.Prelude
 import Clash.Sized.Fixed
 import Data.Ratio
-import Data.List as L
-import Prelude as P
+import qualified Data.List as L
+import qualified Prelude as P
 
 import Data.Ratio
 
-class RealFrac a => Scalable a where
-  unscale :: Integral b => a -> (a, b)
+class (RealFrac a, Integral b) => Scalable a b | a -> b where
+  unscale :: a -> (a, b)
   unscale x = let
     n = ceiling $ logBase 2 $ fromIntegral $ ceiling x
     y = x / (2 P.^ n)
     in (y, n)
 
-  scale :: Integral b => a -> b -> a
+  scale :: a -> b -> a
   scale y n = if n > 0 then y * 2 P.^ n else y / 2 P.^ (-n)
 
-instance Scalable Float
-instance Scalable Double
-instance Integral a => Scalable (Ratio a)
+instance Scalable Float Integer
+instance Scalable Double Integer
+instance (Integral a) => Scalable (Ratio a) Integer
 
-instance (KnownNat a, KnownNat b) => Scalable (UFixed a b)
+instance (KnownNat a, KnownNat b) => Scalable (UFixed a b) Integer
 
-f d x = x * (2 - d * x)
+recipStep d x = x * (2 - d * x)
 
 recipI :: (Num a) => Int -> a -> a
-recipI n d = L.foldr (.) id (L.replicate n $ f d) $ 1
+recipI n d = L.foldr (.) id (L.replicate n $ recipStep d) $ 1
 
 -- recipI 4 0.3 :: Double
 -- recipI 6 0.3 :: Double
 -- recipI 4 3 :: Double
 -- recipI 6 3 :: Double
 
-recipFull :: (Scalable a) => Int -> a -> a
+recipFull :: Scalable a b => Int -> a -> a
 recipFull k x = scale (recipI k y) (-n)
   where
     (y, n) = unscale x
