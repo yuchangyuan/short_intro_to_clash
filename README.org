@@ -3,47 +3,163 @@
 
 # use large font, run below command with C-x C-e
 # (set-frame-font "Ubuntu Mono-48")
+# (refresh-font)
 
 * a short self intro
 - digital IC design engineer
 - interested in FOSS, long time GNU/Linux user
 - familiar with functional programming
 * what is Clash
+** description
+- Clash is a functional hardware description language that borrows both its syntax and semantics from the functional programming language Haskell.
+- compile a subset of Haskell to synthesizable HDL(verilog/VHDL/systemverilog)
+** features
+- Strongly typed
+- Interactive REPL(clashi)
+- Low-level access(blackbox)
 * simplified intro for Haskell
+** ghc/ghci
+- ghc: Glasgow Haskell Compiler
+- ghci: REPL from ghc
+  + :t, type
+  + :i, info
 ** pure
+- every function has no side effect
 ** lazy evaluation
+- do not apply unless necessary
+- list & infinite list
 ** high order function, function vs variable
+- function is variable
+- ordinary variable is function with 0 args
+- so, variable is immutable
 ** curry
-** monad
+- f x y = (f x) y
+- f x y z = (f x y) z = ((f x) y) z
+- let add = (+)
+- let f5 = add 5
+- f5 6 == 11
+** Functor/Applicative
+*** Functor, fmap
+- container with some type
+  + []
+  + Maybe
+- fmap (+ 1) [1,2,3] == [2,3,4]
+- fmap (+ 1) $ Just 4 == Just 5
+- fmap (+ 1) None == None
+*** Applicative, <*>
+- container, can appy inside container
+- [(* 2)] <*> [1, 2, 3]
+- Just (+ 5) <*> Just 6
+- pure (+) <*> Just 5 <*> Just 6
 * try some code in ghci
+** reciprocal calculation
 #+begin_src haskell
-  -- reciprocal calculate, 1/d
-  f d x = x * (2 - d * x)
+-- reciprocal calculate, 1/d
+f d x = x * (2 - d * x)
 
-  f 0.7 1
-  (f 0.7) 1
-  f 0.7 $ 1
+f 0.7 1
+(f 0.7) 1
+f 0.7 $ 1
 
-  f 0.7 $ f 0.7 $ 1
-  f 0.7 $ f 0.7 $ f 0.7 $ 1
+f 0.7 $ f 0.7 $ 1
+f 0.7 $ f 0.7 $ f 0.7 $ 1
 
-  (f 0.7) . (f 0.7) . (f 0.7) $ 1
 
-  foldr (.) id [f 0.7, f 0.7, f 0.7] $ 1
+(f 0.7) . (f 0.7) . (f 0.7) $ 1
+#+end_src
+** make a function
+#+begin_src haskell
+foldr (.) id [f 0.7, f 0.7, f 0.7] $ 1
 
-  foldr (.) id (replicate 3 $ f 0.7) $ 1
+foldr (.) id (replicate 3 $ f 0.7) $ 1
 
-  recipI n d = foldr (.) id (replicate n $ f d) $ 1
+recipI n d = foldr (.) id (replicate n $ f d) $ 1
 #+end_src
 * ~Signal~ in Clash
-* combinational logic
-* sequential logic
-* trival example, FIR Filter
+#+begin_src haskell
+data Signal (dom :: Domain) a
+  = a :- Signal dom a
 
+head# :: Signal dom a -> a
+head# (x' :- _ )  = x'
+
+tail# :: Signal dom a -> Signal dom a
+tail# (_  :- xs') = xs'
+#+end_src
+
+#+begin_src haskell
+instance Functor (Signal dom)
+instance Applicative (Signal dom)
+#+end_src
+
+** compare to List
+#+begin_src haskell
+data [] a = [] | a : [a]
+#+end_src
+
+** try in clashi
+- sampleN @System 5 $ (pure 4)
+
+- let a = fromList @System [1..]
+- sampleN @System 10 $ a
+
+- let b = fromList @System [2..]
+- sampleN @System 10 $ b
+
+- let c = a * (pure 2)
+- sampleN @System 10 $ c
+
+- sampleN @System 10 $ b + c
+* combinational logic
+** for number signal, just apply normal operation
+#+begin_src haskell
+instance Num a => Num (Signal dom a)
+instance Fractional a => Fractional (Signal dom a)
+#+end_src
+
+** for other type, use ~fmap~, ~pure~ & ~<*>~
+#+begin_src haskell
+instance Functor (Signal dom)
+instance Applicative (Signal dom)
+#+end_src
+
+- sampleN @System 10 $ fmap not $ pure False
+- sampleN @System 10 $ pure not <*> pure False
+* sequential logic
+#+begin_src haskell
+register ::
+  (HiddenClockResetEnable dom, NFDataX a) =>
+  a -> Signal dom a -> Signal dom a
+        -- Defined in ‘Clash.Signal’
+infixr 3 `register`
+#+end_src
+
+- a = fromList [1..]
+- b = register 8 a
+- sampleN @System 10 b -- NOTE, first 1 power-up value, then reset value
+- simulateN @System 10 (register 8) [1..] -- power-up value not included
+
+- x = let { a = register False b; b = fmap not a } in a
+- sampleN @System 10 x
+
+* trival example, FIR Filter
+#+begin_src haskell
+fir coeffs x = dotp coeffs (window x)
+  where
+    dotp as bs = sum (zipWith (*) as bs)
+
+-- inferred: Signal dom Int -> Signal dom Int
+fir3int = fir (3 :> 4 :> 5 :> Nil)
+
+-- inferred: Signal dom Float -> Signal dom Float
+fir4float = fir (3.5 :> 4.2 :> 3.0 :> 6.1 :> Nil)
+#+end_src
 * non trival example, reciprocal calculation
 ** function
 ** sequential implementation
 * compare to other (HDL) language
 * refs
-https://downloads.haskell.org/ghc/latest/docs/html/users_guide/
-https://hackage.haskell.org/package/clash-prelude
+- https://downloads.haskell.org/ghc/latest/docs/html/users_guide/
+- https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/Clash-Prelude.html
+- https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/Clash-Signal.html
+- https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/src/Clash.Signal.Internal.html#Signal
