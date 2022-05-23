@@ -7,6 +7,8 @@ import Data.Ratio
 import Data.List as L
 import Prelude as P
 
+import Data.Ratio
+
 class RealFrac a => Scalable a where
   unscale :: Integral b => a -> (a, b)
   unscale x = let
@@ -21,7 +23,6 @@ instance Scalable Float
 instance Scalable Double
 instance Integral a => Scalable (Ratio a)
 
-instance (KnownNat a, KnownNat b) => Scalable (SFixed a b)
 instance (KnownNat a, KnownNat b) => Scalable (UFixed a b)
 
 f d x = x * (2 - d * x)
@@ -39,12 +40,12 @@ recipFull k x = scale (recipI k y) (-n)
   where
     (y, n) = unscale x
 
--- recipFull 6 0.3 :: Double
--- recipFull 6 0.3 :: SFix 8 16
--- recipFull 6 0.3 :: Ratio Integer
+-- recipFull 6 0.7 :: Double
+-- recipFull 6 0.7 :: UFixed 8 16
+-- recipFull 6 (7 % 10)
 -- recipFull 6 3 :: Double
--- recipFull 6 3 :: SFix 8 16
--- recipFull 6 3 :: Ratio Integer
+-- recipFull 6 3 :: UFixed 8 16
+-- recipFull 6 (3 % 1)
 
 {-# ANN recip4_
   (Synthesize
@@ -52,7 +53,7 @@ recipFull k x = scale (recipI k y) (-n)
     , t_inputs = [PortName "x"]
     , t_output = PortName "y"
     }) #-}
-recip4_ :: SFixed 8 24 -> SFixed 8 24
+recip4_ :: UFixed 8 24 -> UFixed 8 24
 recip4_ = recipI 4
 
 {-# ANN recip4
@@ -61,5 +62,5 @@ recip4_ = recipI 4
     , t_inputs = [PortName "x"]
     , t_output = PortName "y"
     }) #-}
-recip4 :: SFixed 8 24 -> SFixed 8 24
+recip4 :: UFixed 8 24 -> UFixed 8 24
 recip4 = recipFull 4
