@@ -154,6 +154,8 @@ fir3int = fir (3 :> 4 :> 5 :> Nil)
 -- inferred: Signal dom Float -> Signal dom Float
 fir4float = fir (3.5 :> 4.2 :> 3.0 :> 6.1 :> Nil)
 #+end_src
+
+see [[./src/FIR.hs]]
 * non trival example, reciprocal calculation
 ** function
 ** sequential implementation

@@ -1,1 +1,3 @@
 /verilog
+*.hi
+*.o
