@@ -100,13 +100,13 @@ data [] a = [] | a : [a]
 ** try in clashi
 - sampleN @System 5 $ (pure 4)
 
-- let a = fromList @System [1..]
+- a = fromList [1..]
 - sampleN @System 10 $ a
 
-- let b = fromList @System [2..]
+- b = fromList [2..]
 - sampleN @System 10 $ b
 
-- let c = a * (pure 2)
+- c = a * (pure 2)
 - sampleN @System 10 $ c
 
 - sampleN @System 10 $ b + c
@@ -117,14 +117,17 @@ instance Num a => Num (Signal dom a)
 instance Fractional a => Fractional (Signal dom a)
 #+end_src
 
-** for other type, use ~fmap~, ~pure~ & ~<*>~
+** for other type, use ~fmap~, ~pure~ & ~<*>~, or helper function: ~.==.~, ~.<.~ ...
 #+begin_src haskell
 instance Functor (Signal dom)
 instance Applicative (Signal dom)
 #+end_src
 
 - sampleN @System 10 $ fmap not $ pure False
+- sampleN @System 10 $ not  <$> pure False
+- sampleN @System 10 $ Just <$> fromList [1..]
 - sampleN @System 10 $ pure not <*> pure False
+- sampleN @System 10 $ pure 5 .>. fromList [1..]
 * sequential logic
 #+begin_src haskell
 register ::
