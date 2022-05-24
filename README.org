@@ -183,9 +183,42 @@ class RealFrac a => Scalable a where
   scale :: Integral b => a -> b -> a
 #+end_src
 ** sequential implementation
+- one iteration per cycle
+- register unscale step
+- register scale step
+- chisel DecoupledIO alike IO
+  + in_data, in_esp, in_valid, in_ready
+  + out_data, out_valid, out_ready
+*** all state
+- ~y~, unscale from in_data, when input ready
+- ~n~, unscale from in_data, when input ready
+- ~esp~, register when input ready
+- ~state~ , state of state machine
+- ~res~, unscaled result
+- ~out_data~, scale from ~res~ & ~n~
+*** state machine
+- state
+  + IDLE
+  + BUSY
+  + DONE
+- output
+  + in_ready <= state == IDLE
+  + out_valid <= state == DONE
+- transition
+  + IDLE -> BUSY
+    condition: in_ready & in_valid
+    state: (y, n) <= unscale in_data, res <= 1.0
+  + BUSY -> DONE
+    condition: abs(res - res') < esp -> DONE
+    state: out_data <= scale res n
+  + DONE -> IDLE
+    condition: out_valid & out_ready
+*** wire
+- res' = res * (2 - y * res)
 * compare to other (HDL) language
 * refs
 - https://downloads.haskell.org/ghc/latest/docs/html/users_guide/
 - https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/Clash-Prelude.html
 - https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/Clash-Signal.html
 - https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/src/Clash.Signal.Internal.html#Signal
+- https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/Clash-Annotations-TopEntity.html#v:Synthesize
