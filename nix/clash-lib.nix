@@ -13,8 +13,8 @@
 }:
 mkDerivation {
   pname = "clash-lib";
-  version = "1.6.1";
-  sha256 = "f2428566d99b1d714728330e6b1613356147e37a9304db549d9a864ee8dbf061";
+  version = "1.6.3";
+  sha256 = "874c0d695ba058425ae3438130c9007b5056b52510ef28f4d14f9f0cbf6b97fa";
   isLibrary = true;
   isExecutable = true;
   enableSeparateDataOutput = true;
