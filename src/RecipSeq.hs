@@ -37,8 +37,10 @@ recipSeq in_data in_esp in_valid out_ready = bundle (in_ready, out_data, out_cnt
     res  = regEn 0 (s_start .||. (state .==. pure BUSY)) res'
     res' = mux s_start 1.0 $ recipStep <$> y <*> res
 
+    -- NOTE, for UFixed, if a < b, a - b = 0, so should not use abs(res - res')
     -- signal done
-    s_done = (abs (res - res') .<. esp) .&&. (state .==. pure BUSY)
+    s_done = (diff .<. esp) .&&. (state .==. pure BUSY)
+    diff = mux (res .<. res') (res' - res) (res - res') -- NOTE, negate & minus might use less resource than 2 minus
 
     -- output data, scaleReverse back from res
     out_data = regEn 0 s_done $ scaleReverse <$> res <*> n
