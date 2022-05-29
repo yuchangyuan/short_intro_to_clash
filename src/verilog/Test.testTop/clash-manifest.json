@@ -1,0 +1,86 @@
+{
+    "components": [
+        "test_top"
+    ],
+    "flags": [
+        20,
+        20
+    ],
+    "hash": "5468a1430cdabfde887b609c0d09f26710c6693059fcc4c1b3bd0cfb19d4fd8b",
+    "dependencies": {
+        "transitive": []
+    },
+    "version": "unstable",
+    "files": [
+        {
+            "name": "test_top_shim.cpp",
+            "sha256": "24a89537070d9c527ee37896550f134cf1be0c7bfa717ce199d2d96ea56b0990"
+        },
+        {
+            "name": "test_top.sdc",
+            "sha256": "13d4c1aafcc09a84d81d3b60d513cb901384a10e27e5a5a16572a600f15895f3"
+        },
+        {
+            "name": "test_top.v",
+            "sha256": "f4414a05dd78f918087b3f47712abcc493ca38c537940396f6626e1c52732cd3"
+        }
+    ],
+    "top_component": {
+        "ports_flat": [
+            {
+                "direction": "in",
+                "domain": "System",
+                "width": 1,
+                "name": "clk",
+                "is_clock": true,
+                "type_name": ""
+            },
+            {
+                "direction": "in",
+                "domain": "System",
+                "width": 1,
+                "name": "rst",
+                "is_clock": false,
+                "type_name": ""
+            },
+            {
+                "direction": "in",
+                "width": 32,
+                "name": "in_data",
+                "is_clock": false,
+                "type_name": "[31:0]"
+            },
+            {
+                "direction": "out",
+                "width": 32,
+                "name": "out_data",
+                "is_clock": false,
+                "type_name": "[31:0]"
+            }
+        ],
+        "name": "test_top"
+    },
+    "domains": {
+        "System": {
+            "period": 10000,
+            "init_behavior": "Defined",
+            "reset_kind": "Asynchronous",
+            "active_edge": "Rising",
+            "reset_polarity": "ActiveHigh"
+        },
+        "XilinxSystem": {
+            "period": 10000,
+            "init_behavior": "Defined",
+            "reset_kind": "Synchronous",
+            "active_edge": "Rising",
+            "reset_polarity": "ActiveHigh"
+        },
+        "IntelSystem": {
+            "period": 10000,
+            "init_behavior": "Defined",
+            "reset_kind": "Asynchronous",
+            "active_edge": "Rising",
+            "reset_polarity": "ActiveHigh"
+        }
+    }
+}
