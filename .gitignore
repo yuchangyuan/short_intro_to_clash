@@ -2,3 +2,4 @@
 /src/verilog
 *.hi
 *.o
+*.out

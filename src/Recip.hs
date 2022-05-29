@@ -95,6 +95,12 @@ recipFull k x = scaleReverse (recipI k y) n
 recip4_ :: UFixed 8 24 -> UFixed 8 24
 recip4_ = recipI 4
 
+-- L.map recip4_ [0.1, 0.3, 0.5, 0.7, 1.0, 1.8, 2.5, 3.0]
+-- recipI 4 (2.5 :: Double)
+-- recipI 1 (2.5 :: Double)
+-- recipI 1 (2.5 :: UFixed 8 24)
+-- (0.5 :: UFixed 8 24) - 1.0
+
 {-# ANN recip4
   (Synthesize
     { t_name   = "recip4"
