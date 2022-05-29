@@ -12,21 +12,16 @@ import Recip
 type SS a = Signal System a
 
 recipSeq :: (Scalable a, HiddenClockResetEnable System, NFDataX a) =>
-            SS a -> SS Bool -> SS a
-recipSeq in_data in_valid = out_data
+            SS a -> SS a
+recipSeq in_data = out_data
   where
-    -- start signal, state from IDLE -> BUSY
-    s_start = in_valid
-
     -- unscale in_data to y & n
     (y', n') = unbundle $ unscale <$> in_data
 
-    n = regEn 0 s_start n'
-    y = regEn 0 s_start y'
+    n = register 0 n'
+    y = register 0 y'
 
-    s_done = register False s_start
-
-    out_data = regEn 0 s_done $ scaleReverse <$> y <*> n
+    out_data = register 0 $ scaleReverse <$> y <*> n
 
 {-# ANN recipSeqTop
   (Synthesize
@@ -34,11 +29,9 @@ recipSeq in_data in_valid = out_data
     , t_inputs = [ PortName "clk"
                  , PortName "rst"
                  , PortName "in_data"
-                 , PortName "in_valid"
                  ]
     , t_output = PortName "out_data"
     }) #-}
 recipSeqTop :: Clock System -> Reset System ->
-               SS (UFixed 8 24) -> SS Bool ->
-               SS (UFixed 8 24)
+               SS (UFixed 8 24) -> SS (UFixed 8 24)
 recipSeqTop clk rst = withClockResetEnable clk rst enableGen recipSeq
