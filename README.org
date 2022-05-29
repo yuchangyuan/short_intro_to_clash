@@ -221,18 +221,21 @@ endmodule
 - register scale step
 - chisel DecoupledIO alike IO
   + in_data, in_esp, in_valid, in_ready
-  + out_data, out_valid, out_ready
+  + out_data, out_cnt, out_valid, out_ready
 *** all state
 - ~y~, unscale from in_data, when input ready
 - ~n~, unscale from in_data, when input ready
 - ~esp~, register when input ready
 - ~state~ , state of state machine
 - ~res~, unscaled result
+- ~out_cnt~
 - ~out_data~, scale from ~res~ & ~n~
 *** state machine
 - state
   + IDLE
   + BUSY
+    - out_cnt <= out_cnt + 1
+    - res <= res * (2 - y * res)
   + DONE
 - output
   + in_ready <= state == IDLE
@@ -240,14 +243,15 @@ endmodule
 - transition
   + IDLE -> BUSY
     condition: in_ready & in_valid
-    state: (y, n) <= unscale in_data, res <= 1.0
+    state: (y, n) <= unscale in_data, res <= 1.0, out_cnt <= 0
   + BUSY -> DONE
     condition: abs(res - res') < esp -> DONE
     state: out_data <= scale res n
   + DONE -> IDLE
     condition: out_valid & out_ready
-*** wire
-- res' = res * (2 - y * res)
+** test for sequential implementation
+[[./tb/tb_recip_seq_top.v]]
+
 * compare to other (HDL) language
 * refs
 - https://downloads.haskell.org/ghc/latest/docs/html/users_guide/

@@ -4,8 +4,8 @@ module RecipSeq where
 import Clash.Prelude
 import Clash.Sized.Fixed
 import Data.Ratio
-import Data.List as L
-import Prelude as P
+import qualified Data.List as L
+import qualified Prelude as P
 
 import Recip
 
@@ -16,9 +16,10 @@ instance NFDataX State
 
 -- input: in_data, in_esp, in_valid, out_ready
 -- output: in_ready, out_data, out_valid
-recipSeq :: (Scalable a, HiddenClockResetEnable System, NFDataX a) =>
-            SS a -> SS a -> SS Bool -> SS Bool -> SS (Bool, a, Bool)
-recipSeq in_data in_esp in_valid out_ready = bundle (in_ready, out_data, out_valid)
+recipSeq :: (Scalable a, HiddenClockResetEnable System, NFDataX a,
+             Num b, NFDataX b) =>
+            SS a -> SS a -> SS Bool -> SS Bool -> SS (Bool, a, b, Bool)
+recipSeq in_data in_esp in_valid out_ready = bundle (in_ready, out_data, out_cnt, out_valid)
   where
     -- start signal, state from IDLE -> BUSY
     s_start = in_ready .&&. in_valid .&&. (state .==. pure IDLE)
@@ -42,6 +43,11 @@ recipSeq in_data in_esp in_valid out_ready = bundle (in_ready, out_data, out_val
     -- output data, scaleReverse back from res
     out_data = regEn 0 s_done $ scaleReverse <$> res <*> n
 
+    -- output cnt
+    cnt_inc = (state .==. pure BUSY) .&&. (not <$> s_done)
+    out_cnt = register 0 out_cnt'
+    out_cnt' = mux s_start 0 $ mux cnt_inc (out_cnt + 1) out_cnt
+
     -- became idle
     s_idle = out_ready .&&. out_valid .&&. (state .==. pure DONE)
 
@@ -57,11 +63,12 @@ recipSeq in_data in_esp in_valid out_ready = bundle (in_ready, out_data, out_val
     in_ready  = state .==. pure IDLE
     out_valid = state .==. pure DONE
 
-testRecipSeq :: (Scalable a, HiddenClockResetEnable System, NFDataX a) =>
-                a -> a -> [(a, Bool)]
-testRecipSeq in_data in_esp = sampleN 10 $ bundle (out_data, out_valid) where
-  (in_ready, out_data, out_valid) = unbundle $
-                                    recipSeq (pure in_data) (pure in_esp) in_valid (pure True)
+testRecipSeq :: (Scalable a, HiddenClockResetEnable System, NFDataX a,
+                 Num b, NFDataX b) =>
+                a -> a -> SS (Bool, a, b, Bool)
+testRecipSeq in_data in_esp = bundle (in_ready .&&. in_valid, out_data, out_cnt, out_valid) where
+  (in_ready, out_data, out_cnt, out_valid) = unbundle $
+                                             recipSeq (pure in_data) (pure in_esp) in_valid (pure True)
 
   -- in valid, False, False, True, False ...
   in_valid = fromList $ [False, False, True] P.++ P.repeat False
@@ -78,10 +85,11 @@ testRecipSeq in_data in_esp = sampleN 10 $ bundle (out_data, out_valid) where
                  ]
     , t_output = PortProduct "" [ PortName "in_ready"
                                 , PortName "out_data"
+                                , PortName "out_cnt"
                                 , PortName "out_valid"
                                 ]
     }) #-}
 recipSeqTop :: Clock System -> Reset System ->
                SS (UFixed 8 24) -> SS (UFixed 8 24) -> SS Bool -> SS Bool ->
-               SS (Bool, UFixed 8 24, Bool)
+               SS (Bool, UFixed 8 24, Unsigned 8, Bool)
 recipSeqTop clk rst = withClockResetEnable clk rst enableGen recipSeq
