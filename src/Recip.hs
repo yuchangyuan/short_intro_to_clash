@@ -40,6 +40,31 @@ leadingZero i = o where
   bv = zipWith (\idx bit -> (idx, not $ bitCoerce bit)) indicesI (bv2v i)
   o = fst $ fold leadingZeroF bv
 
+-- extend 0 at left
+extL :: (KnownNat a, KnownNat b, (1 <=? a) ~ True) => UFixed a b -> BitVector ((a + b - 1) + (a + b))
+extL = extend . pack
+
+-- extend 0 at right
+extR :: (KnownNat a, KnownNat b, (1 <=? a) ~ True) => UFixed a b -> BitVector ((a + b) + (a + b - 1))
+extR x = pack (x, repeat (0 :: Bit))
+
+
+-- NOTE: shift offset in both shiftL & shiftR is Int,
+-- so here we write our own version for dynamic shift
+uShiftL :: (KnownNat a, KnownNat b, (1 <=? a) ~ True,
+            KnownNat c, (a + b) ~ (c + 1)) => UFixed a b -> Index (a + b) -> UFixed a b
+uShiftL x off = res where
+  xe = extR x
+  vec = windows1d SNat (bv2v xe)
+  res = map bitCoerce vec !! off
+
+uShiftR :: (KnownNat a, KnownNat b, (1 <=? a) ~ True,
+           KnownNat c, (a + b) ~ (c + 1)) => UFixed a b -> Index (a + b) -> UFixed a b
+uShiftR x off = res where
+  xe = extL x
+  vec = windows1d SNat (bv2v xe)
+  res = reverse (map bitCoerce vec) !! off
+
 instance (KnownNat a, KnownNat b, a ~ (n + 1)) => Scalable (UFixed a b) where
   type ScaleIndex (UFixed a b) = Index (a + b)
   unscale x = (y, n) where
@@ -47,21 +72,21 @@ instance (KnownNat a, KnownNat b, a ~ (n + 1)) => Scalable (UFixed a b) where
     n = leadingZero v
     p = snatToNum (SNat :: SNat a) -- length of integer part
     y = if n > p
-        then x `shiftL` (fromIntegral $ n - p)
-        else x `shiftR` (fromIntegral $ p - n)
+        then x `uShiftL` (n - p)
+        else x `uShiftR` (p - n)
 
   scale y n = x where
     p = snatToNum (SNat :: SNat a)
     x = if n > p
-        then y `shiftR` (fromIntegral $ n - p)
-        else y `shiftL` (fromIntegral $ p - n)
+        then y `uShiftR` (n - p)
+        else y `uShiftL` (p - n)
 
   -- NOTE: here, scaleReverse y n != scale y (-n)
   scaleReverse y n = x where
     p = snatToNum (SNat :: SNat a)
     x = if n > p
-        then y `shiftL` (fromIntegral $ n - p)
-        else y `shiftR` (fromIntegral $ p - n)
+        then y `uShiftL` (n - p)
+        else y `uShiftR` (p - n)
 
 
 recipStep d x = x * (2 - d * x)
