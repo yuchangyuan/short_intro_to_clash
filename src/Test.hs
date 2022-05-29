@@ -3,9 +3,6 @@ module Test where
 
 import Clash.Prelude
 import Clash.Sized.Fixed
-import Data.Ratio
-import qualified Data.List as L
-import qualified Prelude as P
 
 leadingZeroF :: (Num a) => (a, Bool) -> (a, Bool) -> (a, Bool)
 leadingZeroF (leftIdx, leftAllZero) (rightIdx, rightAllZero) =
