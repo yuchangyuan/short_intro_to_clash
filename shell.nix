@@ -1,4 +1,4 @@
-{ compiler ? "ghc8107"
+{ compiler ? "ghc901"
 , nixpkgs ? <nixpkgs> }:
 let
   config = {
