@@ -2,7 +2,7 @@
 #+author: Yù Chāngyuǎn
 
 # use large font, run below command with C-x C-e
-# (set-frame-font "Ubuntu Mono-48")
+# (set-frame-font "Ubuntu Mono-40")
 # (refresh-font)
 
 * a short self intro
@@ -46,6 +46,8 @@
 - fmap (+ 1) [1,2,3] == [2,3,4]
 - fmap (+ 1) $ Just 4 == Just 5
 - fmap (+ 1) None == None
+- fmap (fmap f5) [Just 5, Nothing, Just 3]
+
 *** Applicative, <*>
 - container, can appy inside container
 - [(* 2)] <*> [1, 2, 3]
@@ -66,6 +68,9 @@ f 0.7 $ f 0.7 $ f 0.7 $ 1
 
 
 (f 0.7) . (f 0.7) . (f 0.7) $ 1
+
+g = f 0.7
+g . g . g $ 1
 #+end_src
 ** make a function
 #+begin_src haskell
@@ -98,16 +103,16 @@ data [] a = [] | a : [a]
 #+end_src
 
 ** try in clashi
-- sampleN @System 5 $ (pure 4)
+- sampleN @System 5 (pure 4)
 
 - a = fromList [1..]
-- sampleN @System 10 $ a
+- sampleN @System 10 a
 
 - b = fromList [2..]
-- sampleN @System 10 $ b
+- sampleN @System 10 b
 
 - c = a * (pure 2)
-- sampleN @System 10 $ c
+- sampleN @System 10 c
 
 - sampleN @System 10 $ b + c
 * combinational logic
@@ -142,7 +147,7 @@ infixr 3 `register`
 - sampleN @System 10 b -- NOTE, first 1 power-up value, then reset value
 - simulateN @System 10 (register 8) [1..] -- power-up value not included
 
-- x = let { a = register False b; b = fmap not a } in a
+- x = register False $ not <$> x
 - sampleN @System 10 x
 
 * trival example, FIR Filter
@@ -159,30 +164,88 @@ fir4float = fir (3.5 :> 4.2 :> 3.0 :> 6.1 :> Nil)
 #+end_src
 
 see [[./src/FIR.hs]]
-* non trival example, reciprocal calculation
+* non trival example, reciprocal calculation for positive
 ** function
 see [[./src/Recip.hs]]
 #+begin_src haskell
 import Data.List as L
 import Prelude as P
 
-f d x = x * (2 - d * x)
+recipStep d x = x * (2 - d * x)
 
 recipI :: (Num a) => Int -> a -> a
-recipI n d = L.foldr (.) id (L.replicate n $ f d) $ 1
+recipI n d = L.foldr (.) id (L.replicate n $ recipStep d) $ 1
 
 recipFull :: (Scalable a) => Int -> a -> a
-recipFull k x = scale (recipI k y) (-n)
+recipFull k x = scaleReverse (recipI k y) n
   where
     (y, n) = unscale x
 #+end_src
+*** type family: Scalable a
+#+begin_src haskell
+class (RealFrac a, Integral (ScaleIndex a)) => Scalable a where
+  type ScaleIndex a :: Type
+  unscale :: a -> (a, ScaleIndex a)
+  scale :: a -> (ScaleIndex a) -> a
+  scaleReverse :: a -> (ScaleIndex a) -> a
+  -- scale (fst $ unscale x) (snd $ unscale x) == x
+  -- scale x n * scaleReverse x n == x * x
+#+end_src
+
+- default implementation for Double, Float & Ratio
+- different implementation for UFixed, make synthesizable
+*** some test
+#+begin_src haskell
+recipI 4 0.3 :: Double
+recipI 6 0.3 :: Double
+recipI 4 3 :: Double
+recipI 6 3 :: Double
+#+end_src
 
 #+begin_src haskell
-class RealFrac a => Scalable a where
-  unscale :: Integral b => a -> (a, b)
-  scale :: Integral b => a -> b -> a
+recipFull 6 0.7 :: Double
+recipFull 6 0.7 :: UFixed 8 16
+recipFull 6 (7 % 10)
+recipFull 6 3 :: Double
+recipFull 6 3 :: UFixed 8 16
+recipFull 6 (3 % 1)
 #+end_src
-** trival test
+** define recip4_ & recip4
+#+begin_src haskell
+{-# ANN recip4_
+  (Synthesize
+    { t_name   = "recip4_"
+    , t_inputs = [PortName "x"]
+    , t_output = PortName "y"
+    }) #-}
+recip4_ :: UFixed 8 24 -> UFixed 8 24
+recip4_ = recipI 4
+
+{-# ANN recip4
+  (Synthesize
+    { t_name   = "recip4"
+    , t_inputs = [PortName "x"]
+    , t_output = PortName "y"
+    }) #-}
+recip4 :: UFixed 8 24 -> UFixed 8 24
+recip4 = recipFull 4
+#+end_src
+*** some test
+#+begin_src haskell
+L.map recip4_ [0.1, 0.3, 0.5, 0.7, 1.0, 1.8, 2.5, 3.0]
+
+mapM_ (print . recip4_) [0.1, 0.3, 0.5, 0.7, 1.0, 1.8, 2.5, 3.0]
+
+recipI 4 (2.5 :: Double)
+recipI 1 (2.5 :: Double)
+recipI 1 (2.5 :: UFixed 8 24)
+(0.5 :: UFixed 8 24) - 1.0
+#+end_src
+
+#+begin_src haskell
+mapM_ (print . recip4) [0.1, 0.3, 0.5, 0.7, 1.0, 1.8, 2.5, 3.0]
+#+end_src
+** trival test for generated verilog
 [[./tb/tb_recip.v]]
 #+begin_src verilog
 module tb;
@@ -220,8 +283,8 @@ endmodule
 - register unscale step
 - register scale step
 - chisel DecoupledIO alike IO
-  + in_data, in_esp, in_valid, in_ready
-  + out_data, out_cnt, out_valid, out_ready
+  + in_data, in_esp, in_valid, in_ready(out)
+  + out_data, out_cnt, out_valid, out_ready(in)
 *** all state
 - ~y~, unscale from in_data, when input ready
 - ~n~, unscale from in_data, when input ready
@@ -229,13 +292,13 @@ endmodule
 - ~state~ , state of state machine
 - ~res~, unscaled result
 - ~out_cnt~
-- ~out_data~, scale from ~res~ & ~n~
+- ~out_data~, finally output, from ~res~ & ~n~
 *** state machine
 - state
   + IDLE
   + BUSY
     - out_cnt <= out_cnt + 1
-    - res <= res * (2 - y * res)
+    - res <= res * (2 - y * res) -- res'
   + DONE
 - output
   + in_ready <= state == IDLE
@@ -246,16 +309,32 @@ endmodule
     state: (y, n) <= unscale in_data, res <= 1.0, out_cnt <= 0
   + BUSY -> DONE
     condition: abs(res - res') < esp -> DONE
-    state: out_data <= scale res n
+    state: out_data <= scaleReverse res n
   + DONE -> IDLE
     condition: out_valid & out_ready
-** test for sequential implementation
-[[./tb/tb_recip_seq_top.v]]
+*** some test
+see [[./src/RecipSeq.hs]] for implementation
 
+#+begin_src haskell
+testRecipSeq :: (Scalable a, Num b) =>
+                a -> a -> SS (Bool, a, b, Bool)
+
+sampleN 10 $ testRecipSeq 0.7 (1e-5 :: Double)
+sampleN 10 $ testRecipSeq 0.7 (1e-5 :: UFixed 8 24)
+sampleN 10 $ testRecipSeq (7 % 10) 1e-5
+
+sampleN 10 $ testRecipSeq 3 (1e-10 :: Double)
+#+end_src
+** test for sequential implementation
+see [[./tb/tb_recip_seq_top.v]]
 * compare to other (HDL) language
+(intentionally blank)
+* UFixed instance of Scalable a
+see [[./src/Recip.hs]]
 * refs
 - https://downloads.haskell.org/ghc/latest/docs/html/users_guide/
 - https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/Clash-Prelude.html
 - https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/Clash-Signal.html
 - https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/src/Clash.Signal.Internal.html#Signal
 - https://hackage.haskell.org/package/clash-prelude-1.6.3/docs/Clash-Annotations-TopEntity.html#v:Synthesize
+- https://github.com/yuchangyuan/short_intro_to_clash

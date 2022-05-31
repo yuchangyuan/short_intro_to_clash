@@ -10,6 +10,9 @@ import qualified Prelude as P
 class (RealFrac a, Integral (ScaleIndex a), NFDataX (ScaleIndex a)) => Scalable a where
   type ScaleIndex a :: Type
   type instance ScaleIndex a = Integer
+  -- rule:
+  -- scale (fst $ unscale x) (snd $ unscale x) == x
+  -- scale x n * scaleReverse x n == x * x
 
   -- only for x > 1, n = 0 if x <= 1
   unscale :: a -> (a, ScaleIndex a)

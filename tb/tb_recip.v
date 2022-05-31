@@ -27,6 +27,8 @@ module tb;
       t(1.8);
       t(2.5);
       t(3.0);
+
+      $finish();
    end
 
 endmodule
